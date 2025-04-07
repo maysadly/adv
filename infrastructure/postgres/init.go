@@ -5,9 +5,7 @@ import (
 	"log"
 )
 
-// InitTables создает необходимые таблицы в базе данных, если они не существуют
 func InitTables() error {
-	// Создание таблицы продуктов
 	createProductsTable := `
     CREATE TABLE IF NOT EXISTS products (
         id UUID PRIMARY KEY,
@@ -16,7 +14,6 @@ func InitTables() error {
         stock INT NOT NULL
     );`
 
-	// Создание таблицы заказов
 	createOrdersTable := `
     CREATE TABLE IF NOT EXISTS orders (
         id UUID PRIMARY KEY,
@@ -26,7 +23,6 @@ func InitTables() error {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );`
 
-	// Создание таблицы элементов заказа
 	createOrderItemsTable := `
     CREATE TABLE IF NOT EXISTS order_items (
         id UUID PRIMARY KEY,
@@ -36,25 +32,24 @@ func InitTables() error {
         price DECIMAL(10, 2) NOT NULL
     );`
 
-	// Выполнение запросов
 	_, err := DB.Exec(context.Background(), createProductsTable)
 	if err != nil {
-		log.Printf("Ошибка при создании таблицы products: %v", err)
+		log.Printf("Error creating products: %v", err)
 		return err
 	}
 
 	_, err = DB.Exec(context.Background(), createOrdersTable)
 	if err != nil {
-		log.Printf("Ошибка при создании таблицы orders: %v", err)
+		log.Printf("Error creating orders: %v", err)
 		return err
 	}
 
 	_, err = DB.Exec(context.Background(), createOrderItemsTable)
 	if err != nil {
-		log.Printf("Ошибка при создании таблицы order_items: %v", err)
+		log.Printf("Error creating order_items: %v", err)
 		return err
 	}
 
-	log.Println("Таблицы успешно инициализированы")
+	log.Println("Tables created successfully")
 	return nil
 }

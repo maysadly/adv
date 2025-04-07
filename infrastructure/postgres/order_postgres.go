@@ -14,17 +14,14 @@ func NewOrderPostgresRepo() *OrderPostgresRepo {
 }
 
 func (r *OrderPostgresRepo) Save(order domain.Order, items []domain.OrderItem) (string, error) {
-	// Начинаем транзакцию
 	tx, err := DB.Begin(context.Background())
 	if err != nil {
 		return "", err
 	}
 	defer tx.Rollback(context.Background())
 
-	// Генерируем ID для заказа
 	orderID := uuid.New().String()
 
-	// Сохраняем заказ
 	orderQuery := `
         INSERT INTO orders (id, user_id, total_price, status) 
         VALUES ($1, $2, $3, $4) 
@@ -43,7 +40,6 @@ func (r *OrderPostgresRepo) Save(order domain.Order, items []domain.OrderItem) (
 		return "", err
 	}
 
-	// Сохраняем элементы заказа
 	itemQuery := `
         INSERT INTO order_items (id, order_id, product_id, quantity, price) 
         VALUES ($1, $2, $3, $4, $5)
@@ -63,7 +59,6 @@ func (r *OrderPostgresRepo) Save(order domain.Order, items []domain.OrderItem) (
 		}
 	}
 
-	// Фиксируем транзакцию
 	if err := tx.Commit(context.Background()); err != nil {
 		return "", err
 	}
@@ -72,7 +67,6 @@ func (r *OrderPostgresRepo) Save(order domain.Order, items []domain.OrderItem) (
 }
 
 func (r *OrderPostgresRepo) FindByID(id string) (domain.Order, []domain.OrderItem, error) {
-	// Получаем заказ
 	orderQuery := `
         SELECT id, user_id, total_price, status, created_at 
         FROM orders 
@@ -90,7 +84,6 @@ func (r *OrderPostgresRepo) FindByID(id string) (domain.Order, []domain.OrderIte
 		return domain.Order{}, nil, err
 	}
 
-	// Получаем элементы заказа
 	itemsQuery := `
         SELECT oi.id, oi.order_id, oi.product_id, oi.quantity, oi.price,
                p.name, p.stock
@@ -126,7 +119,7 @@ func (r *OrderPostgresRepo) FindByID(id string) (domain.Order, []domain.OrderIte
 		item.Product = &domain.Product{
 			ID:    item.ProductID,
 			Name:  productName,
-			Price: item.Price, // Используем цену из заказа
+			Price: item.Price,
 			Stock: productStock,
 		}
 

@@ -1,4 +1,3 @@
-// Состояние приложения
 const state = {
     products: [],
     cart: [],
@@ -14,7 +13,6 @@ const state = {
     orders: []
 };
 
-// DOM-элементы
 const DOM = {
     productsList: document.getElementById('products-list'),
     pagination: document.getElementById('pagination'),
@@ -37,26 +35,21 @@ const DOM = {
     ordersList: document.getElementById('orders-list')
 };
 
-// Инициализация приложения
 document.addEventListener('DOMContentLoaded', () => {
-    // Загрузка продуктов
     fetchProducts();
 
-    // Обработчики событий
     DOM.applyFiltersButton.addEventListener('click', applyFilters);
     DOM.resetFiltersButton.addEventListener('click', resetFilters);
     DOM.orderForm.addEventListener('submit', placeOrder);
     DOM.viewOrdersButton.addEventListener('click', fetchOrders);
     DOM.userIdInput.addEventListener('input', updateCheckoutButton);
 
-    // Проверяем, сохранена ли корзина в localStorage
     const savedCart = localStorage.getItem('cart');
     if (savedCart) {
         state.cart = JSON.parse(savedCart);
         updateCart();
     }
 
-    // Проверяем, сохранен ли ID пользователя в localStorage
     const savedUserId = localStorage.getItem('userId');
     if (savedUserId) {
         DOM.userIdInput.value = savedUserId;
@@ -67,7 +60,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Получение продуктов с фильтрацией и пагинацией
 async function fetchProducts() {
     try {
         const url = new URL('/api/products', window.location.origin);
@@ -100,7 +92,6 @@ async function fetchProducts() {
     }
 }
 
-// Отображение списка продуктов
 function renderProducts() {
     DOM.productsList.innerHTML = '';
 
@@ -140,17 +131,15 @@ function renderProducts() {
     });
 }
 
-// Отображение пагинации
 function renderPagination() {
     DOM.pagination.innerHTML = '';
     
     const totalPages = Math.ceil(state.total / state.perPage);
     if (totalPages <= 1) return;
     
-    // Кнопка "Предыдущая"
     if (state.currentPage > 1) {
         const prevButton = document.createElement('button');
-        prevButton.textContent = 'Назад';
+        prevButton.textContent = 'prev';
         prevButton.addEventListener('click', () => {
             state.currentPage--;
             fetchProducts();
@@ -158,7 +147,6 @@ function renderPagination() {
         DOM.pagination.appendChild(prevButton);
     }
     
-    // Кнопки с номерами страниц
     for (let i = 1; i <= totalPages; i++) {
         const pageButton = document.createElement('button');
         pageButton.textContent = i;
@@ -170,10 +158,9 @@ function renderPagination() {
         DOM.pagination.appendChild(pageButton);
     }
     
-    // Кнопка "Следующая"
     if (state.currentPage < totalPages) {
         const nextButton = document.createElement('button');
-        nextButton.textContent = 'Вперед';
+        nextButton.textContent = 'next';
         nextButton.addEventListener('click', () => {
             state.currentPage++;
             fetchProducts();
@@ -182,7 +169,6 @@ function renderPagination() {
     }
 }
 
-// Добавление товара в корзину
 function addToCart(event) {
     const button = event.target;
     const id = button.dataset.id;
@@ -190,7 +176,6 @@ function addToCart(event) {
     const price = parseFloat(button.dataset.price);
     const stock = parseInt(button.dataset.stock);
     
-    // Проверяем, есть ли уже этот товар в корзине
     const existingItem = state.cart.find(item => item.id === id);
     
     if (existingItem) {
@@ -205,23 +190,18 @@ function addToCart(event) {
         });
     }
     
-    // Обновляем UI
     button.disabled = true;
-    button.textContent = 'В корзине';
+    button.textContent = 'Cart';
     
-    // Сохраняем корзину в localStorage
     localStorage.setItem('cart', JSON.stringify(state.cart));
     
-    // Обновляем отображение корзины
     updateCart();
 }
 
-// Обновление отображения корзины
 function updateCart() {
     const totalItems = state.cart.reduce((sum, item) => sum + item.quantity, 0);
     DOM.cartCount.textContent = totalItems;
     
-    // Если корзина пуста, показываем сообщение
     if (totalItems === 0) {
         DOM.cartEmpty.style.display = 'block';
         DOM.cartItems.innerHTML = '';
@@ -230,16 +210,12 @@ function updateCart() {
         return;
     }
     
-    // Скрываем сообщение о пустой корзине
     DOM.cartEmpty.style.display = 'none';
     
-    // Очищаем содержимое корзины перед обновлением
     DOM.cartItems.innerHTML = '';
     
-    // Общая сумма
     let totalPrice = 0;
     
-    // Добавляем элементы корзины
     state.cart.forEach(item => {
         const itemTotal = item.price * item.quantity;
         totalPrice += itemTotal;
@@ -259,7 +235,6 @@ function updateCart() {
             <button class="main__cart-item-remove" data-id="${item.id}">×</button>
         `;
         
-        // Добавляем обработчики событий для кнопок
         const decreaseButton = cartItem.querySelector('.decrease');
         const increaseButton = cartItem.querySelector('.increase');
         const removeButton = cartItem.querySelector('.main__cart-item-remove');
@@ -271,14 +246,11 @@ function updateCart() {
         DOM.cartItems.appendChild(cartItem);
     });
     
-    // Обновляем общую сумму
     DOM.cartTotal.textContent = `${totalPrice.toFixed(2)} ₸`;
     
-    // Активируем кнопку оформления заказа, если указан ID пользователя
     updateCheckoutButton();
 }
 
-// Уменьшение количества товара в корзине
 function decreaseQuantity(id) {
     const item = state.cart.find(item => item.id === id);
     if (!item) return;
@@ -293,7 +265,6 @@ function decreaseQuantity(id) {
     }
 }
 
-// Увеличение количества товара в корзине
 function increaseQuantity(id) {
     const item = state.cart.find(item => item.id === id);
     if (!item || item.quantity >= item.stock) return;
@@ -303,22 +274,19 @@ function increaseQuantity(id) {
     updateCart();
 }
 
-// Удаление товара из корзины
 function removeFromCart(id) {
     state.cart = state.cart.filter(item => item.id !== id);
     localStorage.setItem('cart', JSON.stringify(state.cart));
     
-    // Обновляем кнопку добавления товара
     const productButton = document.querySelector(`button[data-id="${id}"]`);
     if (productButton) {
         productButton.disabled = false;
-        productButton.textContent = 'Добавить в корзину';
+        productButton.textContent = 'Add to cart';
     }
     
     updateCart();
 }
 
-// Применение фильтров
 function applyFilters() {
     state.filters.name = DOM.nameFilter.value;
     state.filters.minPrice = DOM.minPriceFilter.value;
@@ -327,7 +295,6 @@ function applyFilters() {
     fetchProducts();
 }
 
-// Сброс фильтров
 function resetFilters() {
     DOM.nameFilter.value = '';
     DOM.minPriceFilter.value = '';
@@ -337,7 +304,6 @@ function resetFilters() {
     fetchProducts();
 }
 
-// Обновление кнопки оформления заказа
 function updateCheckoutButton() {
     const userId = DOM.userIdInput.value.trim();
     state.userId = userId;
@@ -348,13 +314,11 @@ function updateCheckoutButton() {
         DOM.checkoutButton.disabled = true;
     }
     
-    // Сохраняем ID пользователя
     if (userId) {
         localStorage.setItem('userId', userId);
     }
 }
 
-// Оформление заказа
 async function placeOrder(event) {
     event.preventDefault();
     
@@ -380,32 +344,27 @@ async function placeOrder(event) {
         
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Ошибка при оформлении заказа: ${errorText}`);
+            throw new Error(`Error creating order: ${errorText}`);
         }
         
         const result = await response.json();
         
-        // Очищаем корзину
         state.cart = [];
         localStorage.setItem('cart', JSON.stringify(state.cart));
         updateCart();
         
-        // Обновляем список продуктов (чтобы обновить доступное количество)
         fetchProducts();
         
-        // Обновляем список заказов
         fetchOrders();
         
-        // Показываем сообщение об успешном оформлении заказа
-        alert(`Заказ успешно оформлен! Номер заказа: ${result.order_id}`);
+        alert(`Order created! Order number: ${result.order_id}`);
         
     } catch (error) {
-        console.error('Ошибка при оформлении заказа:', error);
+        console.error('Error creating order:', error);
         alert(error.message);
     }
 }
 
-// Получение списка заказов
 async function fetchOrders() {
     const userId = DOM.userIdFilter.value.trim();
     if (!userId) return;
@@ -416,7 +375,7 @@ async function fetchOrders() {
         
         const response = await fetch(url);
         if (!response.ok) {
-            throw new Error(`Ошибка при получении заказов: ${response.statusText}`);
+            throw new Error(`Error fetching orders: ${response.statusText}`);
         }
         
         const orders = await response.json();
@@ -424,17 +383,16 @@ async function fetchOrders() {
         
         renderOrders();
     } catch (error) {
-        console.error('Ошибка при загрузке заказов:', error);
-        DOM.ordersList.innerHTML = '<div class="main__orders-error">Ошибка при загрузке заказов</div>';
+        console.error('Error fetching orders:', error);
+        DOM.ordersList.innerHTML = '<div class="main__orders-error">Error fetching orders</div>';
     }
 }
 
-// Отображение списка заказов
 function renderOrders() {
     DOM.ordersList.innerHTML = '';
     
     if (state.orders.length === 0) {
-        DOM.ordersList.innerHTML = '<div class="main__orders-empty">У вас пока нет заказов</div>';
+        DOM.ordersList.innerHTML = '<div class="main__orders-empty">You do not have any orders</div>';
         return;
     }
     
@@ -450,9 +408,9 @@ function renderOrders() {
                 <div class="main__order-item-id">ID: ${order.id}</div>
                 <div class="main__order-item-status ${order.status}">${getStatusText(order.status)}</div>
             </div>
-            ${order.items ? renderOrderItems(order.items) : '<div class="main__order-item-products-empty">Детали заказа недоступны</div>'}
+            ${order.items ? renderOrderItems(order.items) : '<div class="main__order-item-products-empty">Details are not available</div>'}
             <div class="main__order-item-total">
-                <span>Итого:</span>
+                <span>Amount:</span>
                 <span>${order.total_price.toFixed(2)} ₸</span>
             </div>
             ${renderOrderActions(order)}
@@ -460,7 +418,6 @@ function renderOrders() {
         
         DOM.ordersList.appendChild(orderElement);
         
-        // Добавляем обработчики для кнопок
         const actionButtons = orderElement.querySelectorAll('.main__order-item-button');
         actionButtons.forEach(button => {
             button.addEventListener('click', () => updateOrderStatus(order.id, button.dataset.status));
@@ -468,18 +425,17 @@ function renderOrders() {
     });
 }
 
-// Отображение элементов заказа
 function renderOrderItems(items) {
     if (!items || items.length === 0) return '';
     
     let html = '<div class="main__order-item-products">';
     
     items.forEach(item => {
-        const productName = item.product ? item.product.Name : 'Товар недоступен';
+        const productName = item.product ? item.product.Name : 'Product not found';
         html += `
             <div class="main__order-item-product">
                 <div class="main__order-item-product-name">${productName}</div>
-                <div class="main__order-item-product-quantity">${item.quantity} шт.</div>
+                <div class="main__order-item-product-quantity">Quantity: ${item.quantity}</div>
                 <div class="main__order-item-product-price">${item.price.toFixed(2)} ₸</div>
             </div>
         `;
@@ -489,7 +445,6 @@ function renderOrderItems(items) {
     return html;
 }
 
-// Отображение кнопок действий для заказа
 function renderOrderActions(order) {
     if (order.status === 'completed' || order.status === 'cancelled') {
         return '';
@@ -498,14 +453,13 @@ function renderOrderActions(order) {
     return `
         <div class="main__order-item-actions">
             ${order.status === 'pending' ? `
-                <button class="main__order-item-button complete" data-status="completed">Завершить</button>
-                <button class="main__order-item-button cancel" data-status="cancelled">Отменить</button>
+                <button class="main__order-item-button complete" data-status="completed">Complete</button>
+                <button class="main__order-item-button cancel" data-status="cancelled">Cancel</button>
             ` : ''}
         </div>
     `;
 }
 
-// Обновление статуса заказа
 async function updateOrderStatus(orderId, status) {
     try {
         const response = await fetch(`/api/orders/${orderId}`, {
@@ -517,31 +471,28 @@ async function updateOrderStatus(orderId, status) {
         });
         
         if (!response.ok) {
-            throw new Error(`Ошибка при обновлении статуса заказа: ${response.statusText}`);
+            throw new Error(`Error updating order: ${response.statusText}`);
         }
         
-        // Обновляем список заказов
         fetchOrders();
         
-        // Если заказ был отменен, обновляем список продуктов (чтобы обновить доступное количество)
         if (status === 'cancelled') {
             fetchProducts();
         }
     } catch (error) {
-        console.error('Ошибка при обновлении статуса заказа:', error);
+        console.error('Error updating order:', error);
         alert(error.message);
     }
 }
 
-// Получение текстового представления статуса заказа
 function getStatusText(status) {
     switch (status) {
         case 'pending':
-            return 'В обработке';
+            return 'Processing';
         case 'completed':
-            return 'Выполнен';
+            return 'Done';
         case 'cancelled':
-            return 'Отменен';
+            return 'Canceled';
         default:
             return status;
     }
