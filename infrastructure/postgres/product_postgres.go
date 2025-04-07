@@ -66,25 +66,22 @@ func (r *ProductPostgresRepo) FindAllWithFilter(filter domain.FilterParams, pagi
         argCount++
     }
 
-    // Add pagination to the main query
     query += fmt.Sprintf(" ORDER BY id LIMIT $%d OFFSET $%d", argCount, argCount+1)
     args = append(args, pagination.PerPage, offset)
 
-    // Get total count
     var total int
-    if len(args) > 2 { // Only pass filter args if there are any (excluding pagination args)
+    if len(args) > 2 { 
         err := DB.QueryRow(context.Background(), countQuery, args[:len(args)-2]...).Scan(&total)
         if err != nil {
             return nil, 0, err
         }
-    } else { // No filters, just get the total count without args
+    } else { 
         err := DB.QueryRow(context.Background(), countQuery).Scan(&total)
         if err != nil {
             return nil, 0, err
         }
     }
 
-    // Get paginated results
     rows, err := DB.Query(context.Background(), query, args...)
     if err != nil {
         return nil, 0, err

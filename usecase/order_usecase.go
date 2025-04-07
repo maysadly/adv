@@ -20,7 +20,7 @@ func NewOrderUseCase(orderRepo repository.OrderRepository, productRepo repositor
 
 func (uc *OrderUseCase) CreateOrder(orderReq domain.OrderRequest) (string, error) {
 	if len(orderReq.Items) == 0 {
-		return "", errors.New("заказ должен содержать хотя бы один товар")
+		return "", errors.New("order have to have at least one item")
 	}
 
 	// Подготовка заказа
@@ -29,19 +29,18 @@ func (uc *OrderUseCase) CreateOrder(orderReq domain.OrderRequest) (string, error
 
 	for _, item := range orderReq.Items {
 		if item.Quantity <= 0 {
-			return "", errors.New("количество товара должно быть больше 0")
+			return "", errors.New("order item quantity must be greater than zero")
 		}
 
 		product, err := uc.ProductRepo.FindByID(item.ProductID)
 		if err != nil {
-			return "", errors.New("товар не найден")
+			return "", errors.New("product not found")
 		}
 
 		if product.Stock < item.Quantity {
-			return "", errors.New("недостаточное количество товара")
+			return "", errors.New("not enough stock for product")
 		}
 
-		// Создаем элемент заказа
 		orderItem := domain.OrderItem{
 			ProductID: product.ID,
 			Quantity:  item.Quantity,
@@ -49,7 +48,6 @@ func (uc *OrderUseCase) CreateOrder(orderReq domain.OrderRequest) (string, error
 		}
 		orderItems = append(orderItems, orderItem)
 
-		// Обновляем общую цену
 		totalPrice += product.Price * float64(item.Quantity)
 	}
 
@@ -59,13 +57,11 @@ func (uc *OrderUseCase) CreateOrder(orderReq domain.OrderRequest) (string, error
 		Status:     domain.OrderStatusPending,
 	}
 
-	// Сохраняем заказ и его элементы
 	orderID, err := uc.OrderRepo.Save(order, orderItems)
 	if err != nil {
 		return "", err
 	}
 
-	// Обновляем складские запасы
 	for _, item := range orderReq.Items {
 		product, _ := uc.ProductRepo.FindByID(item.ProductID)
 		product.Stock -= item.Quantity
@@ -86,20 +82,17 @@ func (uc *OrderUseCase) GetOrderByID(id string) (domain.Order, error) {
 }
 
 func (uc *OrderUseCase) UpdateOrderStatus(id string, status string) error {
-	// Валидация статуса
 	if status != domain.OrderStatusPending &&
 		status != domain.OrderStatusCompleted &&
 		status != domain.OrderStatusCancelled {
 		return errors.New("неверный статус заказа")
 	}
 
-	// Получаем текущий заказ
 	order, _, err := uc.OrderRepo.FindByID(id)
 	if err != nil {
 		return err
 	}
 
-	// Если отменяем заказ, возвращаем товары на склад
 	if status == domain.OrderStatusCancelled && order.Status != domain.OrderStatusCancelled {
 		_, items, _ := uc.OrderRepo.FindByID(id)
 		for _, item := range items {
