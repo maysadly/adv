@@ -70,7 +70,6 @@ async function fetchProducts(page = currentPage) {
       productsList.appendChild(productItem);
     });
 
-    // Update pagination controls
     updatePagination(data.total, data.page, data.per_page);
 
   } catch (error) {
@@ -80,51 +79,40 @@ async function fetchProducts(page = currentPage) {
 
 function updatePagination(total, currentPage, perPage) {
   const totalPages = Math.ceil(total / perPage);
-  const paginationDiv = document.getElementById("pagination") || document.createElement("div");
-  paginationDiv.id = "pagination";
-  paginationDiv.innerHTML = "";
+  const paginationDiv = document.getElementById("pagination");
 
   if (totalPages <= 1) {
-    if (!document.getElementById("pagination")) {
-      document.body.appendChild(paginationDiv); 
-    }
+    paginationDiv.style.display = "none";
     return;
   }
 
-  if (currentPage > 1) {
-    const prev = document.createElement("button");
-    prev.textContent = "Previous";
-    prev.onclick = () => {
-      currentPage--;
-      fetchProducts(currentPage);
-    };
-    paginationDiv.appendChild(prev);
-  }
+  paginationDiv.style.display = "flex";
+  const prevButton = paginationDiv.querySelector(".main__pagination-button-prev");
+  const nextButton = paginationDiv.querySelector(".main__pagination-button-next");
+  const pageNumbersContainer = paginationDiv.querySelector(".main__pagination-numbers");
+
+  pageNumbersContainer.innerHTML = "";
+
+  prevButton.disabled = currentPage === 1;
+  prevButton.onclick = () => {
+    fetchProducts(currentPage - 1);
+  };
 
   for (let i = 1; i <= totalPages; i++) {
     const pageBtn = document.createElement("button");
     pageBtn.textContent = i;
+    pageBtn.className = "main__pagination-button main__pagination-button-page";
     pageBtn.disabled = i === currentPage;
     pageBtn.onclick = () => {
-      currentPage = i;
-      fetchProducts(currentPage);
+      fetchProducts(i);
     };
-    paginationDiv.appendChild(pageBtn);
+    pageNumbersContainer.appendChild(pageBtn);
   }
 
-  if (currentPage < totalPages) {
-    const next = document.createElement("button");
-    next.textContent = "Next";
-    next.onclick = () => {
-      currentPage++;
-      fetchProducts(currentPage);
-    };
-    paginationDiv.appendChild(next);
-  }
-
-  if (!document.getElementById("pagination")) {
-    document.body.appendChild(paginationDiv); 
-  }
+  nextButton.disabled = currentPage === totalPages;
+  nextButton.onclick = () => {
+    fetchProducts(currentPage + 1);
+  };
 }
 
 async function deleteProduct(productId) {
@@ -187,6 +175,61 @@ async function submitUpdate(event, id) {
     }
   } catch (error) {
     alert(`Failed to update product: ${error}`);
+  }
+}
+
+document
+  .getElementById("filterProduct-form")
+  .addEventListener("submit", async function (event) {
+    event.preventDefault();
+
+    const minPrice = document.querySelector('input[name="minPrice"]').value;
+    const maxPrice = document.querySelector('input[name="maxPrice"]').value;
+
+    fetchProducts(1, { minPrice, maxPrice });
+  });
+
+async function fetchProducts(page = currentPage, filters = {}) {
+  try {
+    const url = new URL("/api/products", window.location.origin);
+    url.searchParams.append("page", page);
+    url.searchParams.append("per_page", perPage);
+
+    if (filters.minPrice) url.searchParams.append("min_price", filters.minPrice);
+    if (filters.maxPrice) url.searchParams.append("max_price", filters.maxPrice);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch products: ${response.statusText}`);
+    }
+    const data = await response.json();
+
+    const productsList = document.getElementById("products-list");
+    productsList.innerHTML = "";
+
+    data.products.forEach((product) => {
+      const productItem = document.createElement("div");
+      productItem.className = "main__products-item";
+      productItem.innerHTML = `
+        <div class="main__products-item-wrap">
+          <div class="main__products-item-name">${product.Name}</div>
+          <button class="main__products-item-edit" onclick="editProduct('${product.ID}', '${product.Name}', ${
+            product.Price
+          }, ${product.Stock})">✏️</button>
+          <button class="main__products-item-delete" onclick="deleteProduct('${
+            product.ID
+          }')">❌</button>
+        </div>
+        <div class="main__products-item-price">${product.Price.toFixed(2)}₸</div>
+        <div class="main__products-item-stock">Stock: ${product.Stock}</div>
+      `;
+      productsList.appendChild(productItem);
+    });
+
+    updatePagination(data.total, data.page, data.per_page);
+
+  } catch (error) {
+    console.error("Error fetching products:", error);
   }
 }
 

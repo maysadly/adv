@@ -102,3 +102,5 @@ func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
 
     h.respondJSON(w, response, http.StatusOK)
 }
+
+
