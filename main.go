@@ -29,20 +29,16 @@ func main() {
 	postgres.InitDB(dbHost)
 	log.Println("Connected to PostgreSQL")
 
-	// Добавляем инициализацию таблиц
 	if err := postgres.InitTables(); err != nil {
 		log.Fatalf("Failed to initialize tables: %v", err)
 	}
 
-	// Инициализация репозиториев
 	productRepo := postgres.NewProductPostgresRepo()
 	orderRepo := postgres.NewOrderPostgresRepo()
 
-	// Инициализация use cases
 	productUC := usecase.NewProductUseCase(productRepo)
 	orderUC := usecase.NewOrderUseCase(orderRepo, productRepo)
 
-	// Инициализация обработчиков
 	productHandler := handler.NewProductHandler(productUC)
 	orderHandler := handler.NewOrderHandler(orderUC)
 
@@ -60,14 +56,12 @@ func main() {
 
 	api := router.PathPrefix("/api").Subrouter()
 
-	// Маршруты для продуктов
 	api.HandleFunc("/products", productHandler.Create).Methods("POST")
 	api.HandleFunc("/products/{id}", productHandler.Get).Methods("GET")
 	api.HandleFunc("/products/{id}", productHandler.Update).Methods("PUT")
 	api.HandleFunc("/products/{id}", productHandler.Delete).Methods("DELETE")
 	api.HandleFunc("/products", productHandler.List).Methods("GET")
 
-	// Маршруты для заказов
 	api.HandleFunc("/orders", orderHandler.CreateOrder).Methods("POST")
 	api.HandleFunc("/orders/{id}", orderHandler.GetOrder).Methods("GET")
 	api.HandleFunc("/orders/{id}", orderHandler.UpdateOrderStatus).Methods("PATCH")
