@@ -1,10 +1,12 @@
 package handler
 
 import (
-	"encoding/json"
-	"net/http"
 	"FoodStore-AdvProg2/domain"
 	"FoodStore-AdvProg2/usecase"
+	"encoding/json"
+	"net/http"
+	"strconv"
+
 	"github.com/gorilla/mux"
 )
 
@@ -64,10 +66,39 @@ func (h *ProductHandler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
-    products, err := h.UC.List()
+    page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+    perPage, _ := strconv.Atoi(r.URL.Query().Get("per_page"))
+    name := r.URL.Query().Get("name")
+    minPrice, _ := strconv.ParseFloat(r.URL.Query().Get("min_price"), 64)
+    maxPrice, _ := strconv.ParseFloat(r.URL.Query().Get("max_price"), 64)
+
+    filter := domain.FilterParams{
+        Name:     name,
+        MinPrice: minPrice,
+        MaxPrice: maxPrice,
+    }
+    pagination := domain.PaginationParams{
+        Page:    page,
+        PerPage: perPage,
+    }
+
+    products, total, err := h.UC.List(filter, pagination)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
-    h.respondJSON(w, products, http.StatusOK)
+
+    response := struct {
+        Products []domain.Product `json:"products"`
+        Total    int              `json:"total"`
+        Page     int              `json:"page"`
+        PerPage  int              `json:"per_page"`
+    }{
+        Products: products,
+        Total:    total,
+        Page:     pagination.Page,
+        PerPage:  pagination.PerPage,
+    }
+
+    h.respondJSON(w, response, http.StatusOK)
 }

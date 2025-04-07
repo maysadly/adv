@@ -4,9 +4,13 @@ import (
     "FoodStore-AdvProg2/handler"
     "FoodStore-AdvProg2/infrastructure/postgres"
     "FoodStore-AdvProg2/usecase"
+    "context"
     "log"
     "net/http"
     "os"
+    "os/signal"
+    "syscall"
+    "time"
 
     "github.com/gorilla/mux"
     "github.com/joho/godotenv"
@@ -19,7 +23,11 @@ func main() {
     }
 
     dbHost := os.Getenv("DB")
+    if dbHost == "" {
+        log.Fatal("DB environment variable not set")
+    }
     postgres.InitDB(dbHost)
+    log.Println("Connected to PostgreSQL")
 
     repo := postgres.NewProductPostgresRepo()
     uc := usecase.NewProductUseCase(repo)
@@ -40,7 +48,30 @@ func main() {
     api.HandleFunc("/products/{id}", productHandler.Delete).Methods("DELETE")
     api.HandleFunc("/products", productHandler.List).Methods("GET")
 
+    server := &http.Server{
+        Addr:         ":8080",
+        Handler:      router,
+        ReadTimeout:  10 * time.Second,
+        WriteTimeout: 10 * time.Second,
+    }
 
-    log.Println("Server is running on http://localhost:8080/")
-    http.ListenAndServe(":8080", router)
+    go func() {
+        log.Println("Server is running on http://localhost:8080/")
+        if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+            log.Fatalf("Server failed: %v", err)
+        }
+    }()
+
+    sigChan := make(chan os.Signal, 1)
+    signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+    <-sigChan
+
+    log.Println("Shutting down server...")
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
+
+    if err := server.Shutdown(ctx); err != nil {
+        log.Printf("Server shutdown failed: %v", err)
+    }
+    log.Println("Server stopped")
 }
