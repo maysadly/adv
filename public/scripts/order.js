@@ -78,7 +78,7 @@ async function fetchProducts() {
 
         const response = await fetch(url);
         if (!response.ok) {
-            throw new Error(`Ошибка при получении продуктов: ${response.statusText}`);
+            throw new Error(`Error fetching products: ${response.statusText}`);
         }
 
         const data = await response.json();
@@ -88,7 +88,7 @@ async function fetchProducts() {
         renderProducts();
         renderPagination();
     } catch (error) {
-        console.error('Ошибка при загрузке продуктов:', error);
+        console.error('Error fetching products:', error);
     }
 }
 
@@ -96,7 +96,7 @@ function renderProducts() {
     DOM.productsList.innerHTML = '';
 
     if (state.products.length === 0) {
-        DOM.productsList.innerHTML = '<div class="main__products-empty">Продукты не найдены</div>';
+        DOM.productsList.innerHTML = '<div class="main__products-empty">Products not found</div>';
         return;
     }
 
@@ -110,7 +110,7 @@ function renderProducts() {
         productElement.innerHTML = `
             <div class="main__product-item-name">${product.Name}</div>
             <div class="main__product-item-price">${product.Price.toFixed(2)} ₸</div>
-            <div class="main__product-item-stock">В наличии: ${product.Stock}</div>
+            <div class="main__product-item-stock">Stock: ${product.Stock}</div>
             <button class="main__product-item-button" 
                     data-id="${product.ID}" 
                     data-name="${product.Name}" 
@@ -118,7 +118,7 @@ function renderProducts() {
                     data-stock="${product.Stock}"
                     ${isInCart || isOutOfStock ? 'disabled' : ''}
             >
-                ${isInCart ? 'В корзине' : isOutOfStock ? 'Нет в наличии' : 'Добавить в корзину'}
+                ${isInCart ? 'In cart' : isOutOfStock ? 'Out of stock' : 'Add to cart'}
             </button>
         `;
         
