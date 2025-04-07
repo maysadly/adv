@@ -22,7 +22,7 @@ document
 
       if (response.ok) {
         document.getElementById("addProduct-form").reset();
-        fetchProducts(1); // Reset to page 1 after adding
+        fetchProducts(1); 
       } else {
         const error = await response.text();
         alert(`Failed to add product: ${error}`);
@@ -34,7 +34,7 @@ document
 
 // Pagination state
 let currentPage = 1;
-const perPage = 5; // Set items per page (adjust as needed)
+const perPage = 5; 
 
 async function fetchProducts(page = currentPage) {
   try {
@@ -86,12 +86,11 @@ function updatePagination(total, currentPage, perPage) {
 
   if (totalPages <= 1) {
     if (!document.getElementById("pagination")) {
-      document.body.appendChild(paginationDiv); // Add if not present, but empty
+      document.body.appendChild(paginationDiv); 
     }
     return;
   }
 
-  // Previous button
   if (currentPage > 1) {
     const prev = document.createElement("button");
     prev.textContent = "Previous";
@@ -102,7 +101,6 @@ function updatePagination(total, currentPage, perPage) {
     paginationDiv.appendChild(prev);
   }
 
-  // Page numbers
   for (let i = 1; i <= totalPages; i++) {
     const pageBtn = document.createElement("button");
     pageBtn.textContent = i;
@@ -114,7 +112,6 @@ function updatePagination(total, currentPage, perPage) {
     paginationDiv.appendChild(pageBtn);
   }
 
-  // Next button
   if (currentPage < totalPages) {
     const next = document.createElement("button");
     next.textContent = "Next";
@@ -125,9 +122,8 @@ function updatePagination(total, currentPage, perPage) {
     paginationDiv.appendChild(next);
   }
 
-  // Append pagination div if not already in the DOM
   if (!document.getElementById("pagination")) {
-    document.body.appendChild(paginationDiv); // Adjust placement as needed
+    document.body.appendChild(paginationDiv); 
   }
 }
 
