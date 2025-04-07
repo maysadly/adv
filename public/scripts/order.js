@@ -488,11 +488,11 @@ async function updateOrderStatus(orderId, status) {
 function getStatusText(status) {
     switch (status) {
         case 'pending':
-            return 'Processing';
+            return 'Pending';
         case 'completed':
-            return 'Done';
+            return 'Completed';
         case 'cancelled':
-            return 'Canceled';
+            return 'Cancelled';
         default:
             return status;
     }
