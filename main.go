@@ -68,8 +68,8 @@ func main() {
 	api.HandleFunc("/orders", orderHandler.GetUserOrders).Methods("GET")
 
 	server := &http.Server{
-		Addr:         ":8080",
-		Handler:      router,
+		Addr:    ":8080",
+		Handler: router,
 	}
 
 	go func() {
