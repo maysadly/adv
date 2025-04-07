@@ -47,12 +47,6 @@ func (r *ProductPostgresRepo) FindAllWithFilter(filter domain.FilterParams, pagi
     args := []interface{}{}
     argCount := 1
 
-    if filter.Name != "" {
-        query += fmt.Sprintf(" AND name ILIKE $%d", argCount)
-        countQuery += fmt.Sprintf(" AND name ILIKE $%d", argCount)
-        args = append(args, "%"+filter.Name+"%")
-        argCount++
-    }
     if filter.MinPrice > 0 {
         query += fmt.Sprintf(" AND price >= $%d", argCount)
         countQuery += fmt.Sprintf(" AND price >= $%d", argCount)
