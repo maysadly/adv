@@ -36,47 +36,6 @@ document
 let currentPage = 1;
 const perPage = 5; 
 
-async function fetchProducts(page = currentPage) {
-  try {
-    const url = new URL("/api/products", window.location.origin);
-    url.searchParams.append("page", page);
-    url.searchParams.append("per_page", perPage);
-
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch products: ${response.statusText}`);
-    }
-    const data = await response.json();
-
-    const productsList = document.getElementById("products-list");
-    productsList.innerHTML = "";
-
-    data.products.forEach((product) => {
-      const productItem = document.createElement("div");
-      productItem.className = "main__products-item";
-      productItem.innerHTML = `
-        <div class="main__products-item-wrap">
-          <div class="main__products-item-name">${product.Name}</div>
-          <button class="main__products-item-edit" onclick="editProduct('${product.ID}', '${product.Name}', ${
-            product.Price
-          }, ${product.Stock})">✏️</button>
-          <button class="main__products-item-delete" onclick="deleteProduct('${
-            product.ID
-          }')">❌</button>
-        </div>
-        <div class="main__products-item-price">${product.Price.toFixed(2)}₸</div>
-        <div class="main__products-item-stock">Stock: ${product.Stock}</div>
-      `;
-      productsList.appendChild(productItem);
-    });
-
-    updatePagination(data.total, data.page, data.per_page);
-
-  } catch (error) {
-    console.error("Error fetching products:", error);
-  }
-}
-
 function updatePagination(total, currentPage, perPage) {
   const totalPages = Math.ceil(total / perPage);
   const paginationDiv = document.getElementById("pagination");
@@ -203,6 +162,8 @@ async function fetchProducts(page = currentPage, filters = {}) {
       throw new Error(`Failed to fetch products: ${response.statusText}`);
     }
     const data = await response.json();
+    
+    currentPage = page;
 
     const productsList = document.getElementById("products-list");
     productsList.innerHTML = "";
@@ -212,16 +173,16 @@ async function fetchProducts(page = currentPage, filters = {}) {
       productItem.className = "main__products-item";
       productItem.innerHTML = `
         <div class="main__products-item-wrap">
-          <div class="main__products-item-name">${product.Name}</div>
-          <button class="main__products-item-edit" onclick="editProduct('${product.ID}', '${product.Name}', ${
-            product.Price
-          }, ${product.Stock})">✏️</button>
+          <div class="main__products-item-name">${product.name}</div>
+          <button class="main__products-item-edit" onclick="editProduct('${product.id}', '${product.name}', ${
+            product.price
+          }, ${product.stock})">✏️</button>
           <button class="main__products-item-delete" onclick="deleteProduct('${
-            product.ID
+            product.id
           }')">❌</button>
         </div>
-        <div class="main__products-item-price">${product.Price.toFixed(2)}₸</div>
-        <div class="main__products-item-stock">Stock: ${product.Stock}</div>
+        <div class="main__products-item-price">${product.price.toFixed(2)}₸</div>
+        <div class="main__products-item-stock">Stock: ${product.stock}</div>
       `;
       productsList.appendChild(productItem);
     });

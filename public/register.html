@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация | Магазин продуктов</title>
+    <link rel="stylesheet" href="/static/styles/main.css">
+    <link rel="stylesheet" href="/static/styles/auth.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header__container container">
+            <div class="header__logo">
+                <a href="/" class="header__logo-link">FoodStore</a>
+            </div>
+            <nav class="header__nav">
+                <a href="/order" class="header__nav-link">Заказать</a>
+                <a href="/login" class="header__nav-link">Войти</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <section class="auth">
+            <div class="auth__container container">
+                <h1 class="auth__title">Регистрация</h1>
+                <form id="register-form" class="auth__form">
+                    <div class="auth__form-group">
+                        <label for="username" class="auth__form-label">Имя пользователя</label>
+                        <input type="text" id="username" name="username" class="auth__form-input" required>
+                    </div>
+                    
+                    <div class="auth__form-group">
+                        <label for="email" class="auth__form-label">Email</label>
+                        <input type="email" id="email" name="email" class="auth__form-input" required>
+                    </div>
+                    
+                    <div class="auth__form-group">
+                        <label for="full_name" class="auth__form-label">Полное имя</label>
+                        <input type="text" id="full_name" name="full_name" class="auth__form-input" required>
+                    </div>
+                    
+                    <div class="auth__form-group">
+                        <label for="password" class="auth__form-label">Пароль</label>
+                        <input type="password" id="password" name="password" class="auth__form-input" required minlength="6">
+                    </div>
+                    
+                    <div class="auth__form-group">
+                        <label for="confirm_password" class="auth__form-label">Подтверждение пароля</label>
+                        <input type="password" id="confirm_password" name="confirm_password" class="auth__form-input" required minlength="6">
+                    </div>
+                    
+                    <div class="auth__form-error" id="register-error"></div>
+                    
+                    <button type="submit" class="auth__form-button">Зарегистрироваться</button>
+                </form>
+                <p class="auth__redirect">
+                    Уже есть аккаунт? <a href="/login" class="auth__redirect-link">Войдите</a>
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="footer__container container">
+            <p class="footer__copyright">&copy; 2023 FoodStore. Все права защищены.</p>
+        </div>
+    </footer>
+    
+    <script src="/static/scripts/auth.js"></script>
+</body>
+</html>

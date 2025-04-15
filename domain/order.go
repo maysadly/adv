@@ -10,13 +10,14 @@ const (
 	OrderStatusCancelled = "cancelled"
 )
 
+// Order представляет заказ в системе
 type Order struct {
-	ID         string      `json:"id"`
-	UserID     string      `json:"user_id"`
-	TotalPrice float64     `json:"total_price"`
-	Status     string      `json:"status"`
-	CreatedAt  time.Time   `json:"created_at"`
-	Items      []OrderItem `json:"items,omitempty"`
+	ID          string      `json:"id"`
+	UserID      string      `json:"user_id"`
+	TotalAmount float64     `json:"total_amount"` // Единое название поля
+	Status      string      `json:"status"`
+	CreatedAt   time.Time   `json:"created_at"`
+	Items       []OrderItem `json:"items,omitempty"`
 }
 
 type OrderItem struct {

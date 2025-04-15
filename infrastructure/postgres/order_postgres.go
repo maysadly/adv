@@ -3,8 +3,9 @@ package postgres
 import (
 	"FoodStore-AdvProg2/domain"
 	"context"
+
 	"github.com/google/uuid"
-	"time"
+	"github.com/jackc/pgx/v4"
 )
 
 type OrderPostgresRepo struct{}
@@ -13,41 +14,36 @@ func NewOrderPostgresRepo() *OrderPostgresRepo {
 	return &OrderPostgresRepo{}
 }
 
+// Save сохраняет новый заказ в базу данных
 func (r *OrderPostgresRepo) Save(order domain.Order, items []domain.OrderItem) (string, error) {
-	tx, err := DB.Begin(context.Background())
+	tx, err := DB.BeginTx(context.Background(), pgx.TxOptions{})
 	if err != nil {
 		return "", err
 	}
-	defer tx.Rollback(context.Background())
 
+	// В случае ошибки откатываем транзакцию
+	defer func() {
+		if err != nil {
+			tx.Rollback(context.Background())
+		}
+	}()
+
+	// Генерируем ID заказа
 	orderID := uuid.New().String()
 
-	orderQuery := `
-        INSERT INTO orders (id, user_id, total_price, status) 
-        VALUES ($1, $2, $3, $4) 
-        RETURNING created_at
-    `
-	var createdAt time.Time
-	err = tx.QueryRow(
-		context.Background(),
-		orderQuery,
-		orderID,
-		order.UserID,
-		order.TotalPrice,
-		domain.OrderStatusPending,
-	).Scan(&createdAt)
+	// Сохраняем заказ
+	_, err = tx.Exec(context.Background(),
+		"INSERT INTO orders (id, user_id, status, total_amount, created_at) VALUES ($1, $2, $3, $4, $5)",
+		orderID, order.UserID, order.Status, order.TotalAmount, order.CreatedAt,
+	)
 	if err != nil {
 		return "", err
 	}
 
-	itemQuery := `
-        INSERT INTO order_items (id, order_id, product_id, quantity, price) 
-        VALUES ($1, $2, $3, $4, $5)
-    `
+	// Сохраняем элементы заказа
 	for _, item := range items {
-		_, err := tx.Exec(
-			context.Background(),
-			itemQuery,
+		_, err = tx.Exec(context.Background(),
+			"INSERT INTO order_items (id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5)",
 			uuid.New().String(),
 			orderID,
 			item.ProductID,
@@ -68,7 +64,7 @@ func (r *OrderPostgresRepo) Save(order domain.Order, items []domain.OrderItem) (
 
 func (r *OrderPostgresRepo) FindByID(id string) (domain.Order, []domain.OrderItem, error) {
 	orderQuery := `
-        SELECT id, user_id, total_price, status, created_at 
+        SELECT id, user_id, total_amount, status, created_at 
         FROM orders 
         WHERE id = $1
     `
@@ -76,7 +72,7 @@ func (r *OrderPostgresRepo) FindByID(id string) (domain.Order, []domain.OrderIte
 	err := DB.QueryRow(context.Background(), orderQuery, id).Scan(
 		&order.ID,
 		&order.UserID,
-		&order.TotalPrice,
+		&order.TotalAmount,
 		&order.Status,
 		&order.CreatedAt,
 	)
@@ -137,7 +133,7 @@ func (r *OrderPostgresRepo) UpdateStatus(id string, status string) error {
 
 func (r *OrderPostgresRepo) FindByUserID(userID string) ([]domain.Order, error) {
 	query := `
-        SELECT id, user_id, total_price, status, created_at 
+        SELECT id, user_id, total_amount, status, created_at 
         FROM orders 
         WHERE user_id = $1
         ORDER BY created_at DESC
@@ -154,7 +150,7 @@ func (r *OrderPostgresRepo) FindByUserID(userID string) ([]domain.Order, error) 
 		err := rows.Scan(
 			&order.ID,
 			&order.UserID,
-			&order.TotalPrice,
+			&order.TotalAmount,
 			&order.Status,
 			&order.CreatedAt,
 		)
@@ -169,7 +165,7 @@ func (r *OrderPostgresRepo) FindByUserID(userID string) ([]domain.Order, error) 
 
 func (r *OrderPostgresRepo) FindAll() ([]domain.Order, error) {
 	query := `
-        SELECT id, user_id, total_price, status, created_at 
+        SELECT id, user_id, total_amount, status, created_at 
         FROM orders 
         ORDER BY created_at DESC
     `
@@ -185,7 +181,7 @@ func (r *OrderPostgresRepo) FindAll() ([]domain.Order, error) {
 		err := rows.Scan(
 			&order.ID,
 			&order.UserID,
-			&order.TotalPrice,
+			&order.TotalAmount,
 			&order.Status,
 			&order.CreatedAt,
 		)

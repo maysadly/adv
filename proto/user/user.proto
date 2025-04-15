@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package user;
+option go_package = "FoodStore-AdvProg2/proto/user";
+
+// Модель пользователя
+message User {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  string full_name = 4;
+  // Пароль не включается в ответы
+}
+
+// Запрос на регистрацию
+message UserRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+  string full_name = 4;
+}
+
+// Ответ после регистрации
+message UserResponse {
+  User user = 1;
+}
+
+// Запрос на аутентификацию
+message AuthRequest {
+  string username = 1;
+  string password = 2;
+}
+
+// Ответ после аутентификации
+message AuthResponse {
+  User user = 1;
+}
+
+// Запрос на получение профиля
+message UserProfileRequest {
+  string user_id = 1;
+}
+
+// Профиль пользователя
+message UserProfile {
+  User user = 1;
+  // Дополнительно можно добавить историю заказов и т.д.
+}
+
+// LoginResponse - ответ на запрос входа
+message LoginResponse {
+  User user = 1;
+}
+
+// Определение сервиса
+service UserService {
+  rpc RegisterUser(UserRequest) returns (UserResponse);
+  rpc AuthenticateUser(AuthRequest) returns (AuthResponse);
+  rpc GetUserProfile(UserProfileRequest) returns (UserProfile);
+}

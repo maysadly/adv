@@ -43,6 +43,15 @@ document.addEventListener('DOMContentLoaded', () => {
     DOM.orderForm.addEventListener('submit', placeOrder);
     DOM.viewOrdersButton.addEventListener('click', fetchOrders);
     DOM.userIdInput.addEventListener('input', updateCheckoutButton);
+    
+    // Добавляем обработчик для кнопок в заказах
+    DOM.ordersList.addEventListener('click', (e) => {
+        if (e.target.classList.contains('main__order-item-button')) {
+            const orderId = e.target.closest('.main__order-item').dataset.orderId;
+            const status = e.target.dataset.status;
+            updateOrderStatus(orderId, status);
+        }
+    });
 
     const savedCart = localStorage.getItem('cart');
     if (savedCart) {
@@ -104,18 +113,18 @@ function renderProducts() {
         const productElement = document.createElement('div');
         productElement.className = 'main__product-item';
         
-        const isInCart = state.cart.some(item => item.id === product.ID);
-        const isOutOfStock = product.Stock <= 0;
+        const isInCart = state.cart.some(item => item.id === product.id);
+        const isOutOfStock = product.stock <= 0;
         
         productElement.innerHTML = `
-            <div class="main__product-item-name">${product.Name}</div>
-            <div class="main__product-item-price">${product.Price.toFixed(2)} ₸</div>
-            <div class="main__product-item-stock">Stock: ${product.Stock}</div>
+            <div class="main__product-item-name">${product.name}</div>
+            <div class="main__product-item-price">${product.price.toFixed(2)} ₸</div>
+            <div class="main__product-item-stock">Stock: ${product.stock}</div>
             <button class="main__product-item-button" 
-                    data-id="${product.ID}" 
-                    data-name="${product.Name}" 
-                    data-price="${product.Price}" 
-                    data-stock="${product.Stock}"
+                    data-id="${product.id}" 
+                    data-name="${product.name}" 
+                    data-price="${product.price}" 
+                    data-stock="${product.stock}"
                     ${isInCart || isOutOfStock ? 'disabled' : ''}
             >
                 ${isInCart ? 'In cart' : isOutOfStock ? 'Out of stock' : 'Add to cart'}
@@ -176,33 +185,27 @@ function addToCart(event) {
     const price = parseFloat(button.dataset.price);
     const stock = parseInt(button.dataset.stock);
     
-    const existingItem = state.cart.find(item => item.id === id);
+    const existingProduct = state.cart.find(item => item.id === id);
+    if (existingProduct) return;
     
-    if (existingItem) {
-        existingItem.quantity += 1;
-    } else {
-        state.cart.push({
-            id,
-            name,
-            price,
-            stock,
-            quantity: 1
-        });
-    }
-    
-    button.disabled = true;
-    button.textContent = 'Cart';
+    state.cart.push({
+        id,
+        name,
+        price,
+        stock,
+        quantity: 1
+    });
     
     localStorage.setItem('cart', JSON.stringify(state.cart));
+    
+    button.disabled = true;
+    button.textContent = 'In cart';
     
     updateCart();
 }
 
 function updateCart() {
-    const totalItems = state.cart.reduce((sum, item) => sum + item.quantity, 0);
-    DOM.cartCount.textContent = totalItems;
-    
-    if (totalItems === 0) {
+    if (state.cart.length === 0) {
         DOM.cartEmpty.style.display = 'block';
         DOM.cartItems.innerHTML = '';
         DOM.cartTotal.textContent = '0 ₸';
@@ -322,45 +325,50 @@ function updateCheckoutButton() {
 async function placeOrder(event) {
     event.preventDefault();
     
+    if (state.cart.length === 0) return;
+    
     const userId = DOM.userIdInput.value.trim();
-    if (!userId || state.cart.length === 0) return;
+    if (!userId) {
+        alert('Please enter your ID');
+        return;
+    }
     
     try {
-        const orderData = {
-            user_id: userId,
-            items: state.cart.map(item => ({
-                product_id: item.id,
-                quantity: item.quantity
-            }))
-        };
+        const items = state.cart.map(item => ({
+            product_id: item.id,
+            quantity: item.quantity
+        }));
         
         const response = await fetch('/api/orders', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(orderData)
+            body: JSON.stringify({
+                user_id: userId,
+                items: items
+            })
         });
         
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Error creating order: ${errorText}`);
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Error placing order');
         }
         
         const result = await response.json();
         
+        // Очищаем корзину
         state.cart = [];
         localStorage.setItem('cart', JSON.stringify(state.cart));
         updateCart();
         
+        // Обновляем список продуктов и заказов
         fetchProducts();
-        
         fetchOrders();
         
-        alert(`Order created! Order number: ${result.order_id}`);
-        
+        alert('Order placed successfully!');
     } catch (error) {
-        console.error('Error creating order:', error);
+        console.error('Error placing order:', error);
         alert(error.message);
     }
 }
@@ -389,54 +397,61 @@ async function fetchOrders() {
 }
 
 function renderOrders() {
-    DOM.ordersList.innerHTML = '';
-    
     if (state.orders.length === 0) {
-        DOM.ordersList.innerHTML = '<div class="main__orders-empty">You do not have any orders</div>';
+        DOM.ordersList.innerHTML = '<div class="main__orders-empty">No orders found</div>';
         return;
     }
     
+    DOM.ordersList.innerHTML = '';
+    
     state.orders.forEach(order => {
-        const orderElement = document.createElement('div');
-        orderElement.className = 'main__order-item';
+        const orderItem = document.createElement('div');
+        orderItem.className = 'main__order-item';
         
-        const createdDate = new Date(order.created_at).toLocaleString();
-        
-        orderElement.innerHTML = `
+        orderItem.innerHTML = `
             <div class="main__order-item-header">
-                <div class="main__order-item-date">${createdDate}</div>
-                <div class="main__order-item-id">ID: ${order.id}</div>
+                <div class="main__order-item-id">Order #${order.id}</div>
                 <div class="main__order-item-status ${order.status}">${getStatusText(order.status)}</div>
             </div>
-            ${order.items ? renderOrderItems(order.items) : '<div class="main__order-item-products-empty">Details are not available</div>'}
+            <div class="main__order-item-products">
+                ${renderOrderItems(order.items)}
+            </div>
             <div class="main__order-item-total">
-                <span>Amount:</span>
-                <span>${order.total_price.toFixed(2)} ₸</span>
+                <span>Total:</span>
+                <span>${order.total_amount.toFixed(2)} ₸</span>
             </div>
             ${renderOrderActions(order)}
         `;
         
-        DOM.ordersList.appendChild(orderElement);
+        DOM.ordersList.appendChild(orderItem);
         
-        const actionButtons = orderElement.querySelectorAll('.main__order-item-button');
-        actionButtons.forEach(button => {
-            button.addEventListener('click', () => updateOrderStatus(order.id, button.dataset.status));
-        });
+        // Добавляем обработчики событий для кнопок
+        const completeButton = orderItem.querySelector('.main__order-item-button.complete');
+        const cancelButton = orderItem.querySelector('.main__order-item-button.cancel');
+        
+        if (completeButton) {
+            completeButton.addEventListener('click', () => updateOrderStatus(order.id, 'completed'));
+        }
+        
+        if (cancelButton) {
+            cancelButton.addEventListener('click', () => updateOrderStatus(order.id, 'cancelled'));
+        }
     });
 }
 
 function renderOrderItems(items) {
-    if (!items || items.length === 0) return '';
+    if (!items || items.length === 0) {
+        return '<div class="main__order-item-products-empty">No products in this order</div>';
+    }
     
     let html = '<div class="main__order-item-products">';
     
     items.forEach(item => {
-        const productName = item.product ? item.product.Name : 'Product not found';
+        const productName = item.product ? item.product.name : 'Unknown product';
         html += `
             <div class="main__order-item-product">
-                <div class="main__order-item-product-name">${productName}</div>
-                <div class="main__order-item-product-quantity">Quantity: ${item.quantity}</div>
-                <div class="main__order-item-product-price">${item.price.toFixed(2)} ₸</div>
+                <span>${productName}</span>
+                <span>${item.quantity} x ${item.price.toFixed(2)} ₸</span>
             </div>
         `;
     });
@@ -487,13 +502,9 @@ async function updateOrderStatus(orderId, status) {
 
 function getStatusText(status) {
     switch (status) {
-        case 'pending':
-            return 'Pending';
-        case 'completed':
-            return 'Completed';
-        case 'cancelled':
-            return 'Cancelled';
-        default:
-            return status;
+        case 'pending': return 'Pending';
+        case 'completed': return 'Completed';
+        case 'cancelled': return 'Cancelled';
+        default: return status;
     }
 }

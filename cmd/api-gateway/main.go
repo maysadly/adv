@@ -4,10 +4,17 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	"FoodStore-AdvProg2/cmd/api-gateway/handler"
+	"FoodStore-AdvProg2/cmd/api-gateway/middleware"
+	"FoodStore-AdvProg2/proto/inventory"
+	"FoodStore-AdvProg2/proto/order"
+	"FoodStore-AdvProg2/proto/user"
 )
 
 func main() {
@@ -16,14 +23,61 @@ func main() {
 		log.Printf("Warning: Error loading .env file: %s", err)
 	}
 
-	r := gin.Default()
+	// Запускаем отдельный сервер для главной страницы
+	RunHomepageServer()
 
-	r.Use(gin.Logger())
-	r.Use(gin.Recovery())
+	// Подключение к сервисам через gRPC
+	inventoryConn, err := connectToService("INVENTORY_SERVICE_URL", "localhost:8081")
+	if err != nil {
+		log.Fatalf("Failed to connect to inventory service: %v", err)
+	}
+	defer inventoryConn.Close()
 
+	orderConn, err := connectToService("ORDER_SERVICE_URL", "localhost:8082")
+	if err != nil {
+		log.Fatalf("Failed to connect to order service: %v", err)
+	}
+	defer orderConn.Close()
+
+	userConn, err := connectToService("USER_SERVICE_URL", "localhost:8083")
+	if err != nil {
+		log.Fatalf("Failed to connect to user service: %v", err)
+	}
+	defer userConn.Close()
+
+	// Создание gRPC клиентов
+	inventoryClient := inventory.NewInventoryServiceClient(inventoryConn)
+	orderClient := order.NewOrderServiceClient(orderConn)
+	userClient := user.NewUserServiceClient(userConn)
+
+	// Создание обработчиков
+	productHandler := handler.NewProductHandler(inventoryClient)
+	orderHandler := handler.NewOrderHandler(orderClient)
+	userHandler := handler.NewUserHandler(userClient)
+
+	// Инициализация Gin с нуля
+	r := gin.New()
+	r.Use(gin.Logger(), gin.Recovery())
+	r.Use(middleware.Logger())
+	r.Use(middleware.Telemetry())
+
+	// Статические файлы и шаблоны
 	r.Static("/static", "./public")
+	r.LoadHTMLGlob("./public/*.html")
 
-	r.LoadHTMLGlob("public/*.html")
+	// Регистрируем тестовые маршруты
+	r.GET("/test", func(c *gin.Context) {
+		c.String(http.StatusOK, "Test page works!")
+	})
+
+	// ВАЖНО: явная регистрация корневого маршрута
+	r.GET("/", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "login.html", gin.H{
+			"title": "Food Store - Вход в систему",
+		})
+	})
+
+	// HTML страницы
 	r.GET("/admin", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "admin.html", nil)
 	})
@@ -31,78 +85,59 @@ func main() {
 		c.HTML(http.StatusOK, "order.html", nil)
 	})
 
-	inventoryAPI := r.Group("/api/products")
+	// API маршруты
+	api := r.Group("/api")
 	{
-		inventoryAPI.GET("", proxyToInventoryService)
-		inventoryAPI.GET("/:id", proxyToInventoryService)
-		inventoryAPI.POST("", proxyToInventoryService)
-		inventoryAPI.PUT("/:id", proxyToInventoryService)
-		inventoryAPI.DELETE("/:id", proxyToInventoryService)
+		// Product routes
+		products := api.Group("/products")
+		{
+			products.GET("", productHandler.ListProducts)
+			products.GET("/:id", productHandler.GetProduct)
+			products.POST("", productHandler.CreateProduct)
+			products.PUT("/:id", productHandler.UpdateProduct)
+			products.DELETE("/:id", productHandler.DeleteProduct)
+		}
+
+		// Order routes
+		orders := api.Group("/orders")
+		{
+			orders.POST("", orderHandler.CreateOrder)
+			orders.GET("", orderHandler.GetOrders)
+			orders.GET("/:id", orderHandler.GetOrder)
+			orders.PATCH("/:id", orderHandler.UpdateOrderStatus)
+		}
+
+		// User routes
+		users := api.Group("/users")
+		{
+			users.POST("/register", userHandler.RegisterUser)
+			users.POST("/login", userHandler.AuthenticateUser)
+			users.GET("/profile", middleware.AuthMiddleware(), userHandler.GetUserProfile)
+		}
 	}
 
-	orderAPI := r.Group("/api/orders")
-	{
-		orderAPI.GET("", proxyToOrderService)
-		orderAPI.GET("/:id", proxyToOrderService)
-		orderAPI.POST("", proxyToOrderService)
-		orderAPI.PATCH("/:id", proxyToOrderService)
-	}
-
+	// Запуск сервера
 	port := os.Getenv("API_GATEWAY_PORT")
 	if port == "" {
 		port = "8080"
 	}
 
-	log.Printf("API Gateway is starting on port %s...", port)
-	r.Run(":" + port)
+	log.Printf("API Gateway starting on port %s", port)
+
+	// Регистрируем корневой маршрут перед запуском
+	RegisterRootHandler(r)
+
+	if err := r.Run(":" + port); err != nil {
+		log.Fatalf("Failed to run server: %v", err)
+	}
 }
 
-func proxyToInventoryService(c *gin.Context) {
-	proxyRequest(c, os.Getenv("INVENTORY_SERVICE_URL"))
-}
-
-func proxyToOrderService(c *gin.Context) {
-	proxyRequest(c, os.Getenv("ORDER_SERVICE_URL"))
-}
-
-func proxyRequest(c *gin.Context, serviceURL string) {
+// Функция для подключения к gRPC сервису
+func connectToService(envVarName, defaultURL string) (*grpc.ClientConn, error) {
+	serviceURL := os.Getenv(envVarName)
 	if serviceURL == "" {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Service URL not configured"})
-		return
+		serviceURL = defaultURL
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
-
-	targetURL := serviceURL + c.Request.URL.Path
-	if c.Request.URL.RawQuery != "" {
-		targetURL += "?" + c.Request.URL.RawQuery
-	}
-
-	req, err := http.NewRequest(c.Request.Method, targetURL, c.Request.Body)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	for key, values := range c.Request.Header {
-		for _, value := range values {
-			req.Header.Add(key, value)
-		}
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Service unavailable: " + err.Error()})
-		return
-	}
-	defer resp.Body.Close()
-
-	c.Status(resp.StatusCode)
-	for key, values := range resp.Header {
-		for _, value := range values {
-			c.Header(key, value)
-		}
-	}
-
-	c.DataFromReader(resp.StatusCode, resp.ContentLength, resp.Header.Get("Content-Type"), resp.Body, nil)
+	return grpc.Dial(serviceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 }

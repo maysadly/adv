@@ -1,0 +1,82 @@
+/* Стили для форм авторизации и регистрации */
+.auth {
+    padding: 40px 0;
+}
+
+.auth__container {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.auth__title {
+    font-size: 24px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.auth__form {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 30px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.auth__form-group {
+    margin-bottom: 20px;
+}
+
+.auth__form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.auth__form-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.auth__form-input:focus {
+    border-color: #4caf50;
+    outline: none;
+}
+
+.auth__form-button {
+    width: 100%;
+    padding: 12px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.auth__form-button:hover {
+    background-color: #3e8e41;
+}
+
+.auth__form-error {
+    color: #e53935;
+    margin-bottom: 15px;
+    min-height: 20px;
+    font-size: 14px;
+}
+
+.auth__redirect {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.auth__redirect-link {
+    color: #4caf50;
+    text-decoration: none;
+}
+
+.auth__redirect-link:hover {
+    text-decoration: underline;
+}
